@@ -18,7 +18,7 @@
 #gt-root{--bg:#0e0e11;--panel:#161619;--panel2:#1d1d22;--line:#2a2a31;--ink:#e9e9ee;--dim:#8b8b96;--accent:#a855f7;--accent2:#7c3aed;--radius:10px}
 #gt-root *{box-sizing:border-box}
 #gt-root{height:100vh;background:var(--bg);color:var(--ink);font:13px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;-webkit-font-smoothing:antialiased}
-#gt-root .gt-app{display:grid;grid-template-columns:1fr 300px;height:100vh}
+#gt-root .gt-app{display:grid;grid-template-columns:1fr 300px;height:100%}
 #gt-root .gt-stage{display:flex;flex-direction:column;min-width:0}
 #gt-root .gt-topbar{display:flex;align-items:center;gap:14px;padding:12px 18px;border-bottom:1px solid var(--line)}
 #gt-root .gt-topbar h1{font-size:14px;font-weight:600;margin:0;letter-spacing:.02em}
@@ -242,6 +242,28 @@
 </div>
 `;
   ROOT.innerHTML = GT_HTML;
+
+  /* ---- fit height to the space actually available below whatever sits above
+     the embed (Webflow nav, section padding, etc.) instead of forcing 100vh,
+     which overflows the viewport by the height of the nav. Recomputes on
+     resize / load / orientation change. ---- */
+  function gtFit(){
+    var top = ROOT.getBoundingClientRect().top + (window.pageYOffset || window.scrollY || 0);
+    var vh  = window.innerHeight || document.documentElement.clientHeight;
+    var h   = vh - top;
+    if(h < 360) h = 360;                 // sane floor for tiny/edge cases
+    ROOT.style.height = h + 'px';
+  }
+  gtFit();
+  // On user resize the app's own resize listener re-renders the canvas; gtFit
+  // just adjusts the height first (added here, so it runs before that listener).
+  window.addEventListener('resize', gtFit);
+  // load/orientation can change the space above us (fonts, mobile browser chrome);
+  // recompute, then fire one resize so the app re-renders. gtFit never dispatches,
+  // so this can't loop.
+  function gtRefit(){ gtFit(); window.dispatchEvent(new Event('resize')); }
+  window.addEventListener('orientationchange', gtRefit);
+  window.addEventListener('load', gtRefit);
 
   /* ============================ gl.js ============================ */
 /* ============================================================================
